@@ -5,39 +5,9 @@ use std;
 use std::ffi::CString;
 
 pub mod render_gl;
+pub mod utils;
 
-#[derive(Debug,Clone,Copy)]
-struct Vertex {
-    data: [f32;6]
-}
-
-impl Vertex {
-    fn new(x: f32, y: f32, z: f32, r: f32, g: f32, b: f32) -> Self {
-        Vertex { data: [x, y, z, r, g, b] }
-    }
-
-    fn set_pos(&mut self, x: f32, y: f32, z: f32) {
-        self.data[0] = x;
-        self.data[1] = y;
-        self.data[2] = z;
-    }
-
-    fn set_color(&mut self, r: f32, g: f32, b: f32) {
-        self.data[3] = r;
-        self.data[4] = g;
-        self.data[5] = b;
-    }
-}
-
-impl FromIterator<Vertex> for Vec<f32> {
-    fn from_iter<T: IntoIterator<Item = Vertex>>(iter: T) -> Self {
-        let mut v = vec![];
-        for item in iter {
-            v.extend_from_slice(&item.data);
-        }
-        v
-    }
-}
+use crate::utils::*;
 
 fn main() {
     let sdl = sdl2::init().unwrap();
@@ -75,13 +45,11 @@ fn main() {
 
     let shader_program = render_gl::Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
 
-    let vertices = [
-        Vertex::new(-0.5, -0.5, 0.0, 1.0, 0.0, 1.0),
-        Vertex::new(0.5, -0.5, 0.0, 0.0, 1.0, 0.0),
-        Vertex::new(0.0, 0.5, 0.0, 0.0, 0.0, 1.0),
+    let vertices = vec![
+        Vertex::new(Point::new(-0.5, -0.5, 0.0), Color::new(1.0, 0.0, 1.0)),
+        Vertex::new(Point::new(0.5, -0.5, 0.0), Color::new(0.0, 1.0, 0.0)),
+        Vertex::new(Point::new(0.0, 0.5, 0.0), Color::new(0.0, 0.0, 1.0)),
     ];
-
-    let vbuff: Vec<f32> = vertices.iter().cloned().collect();
 
     let mut vbo: gl::types::GLuint = 0;
 
@@ -89,10 +57,10 @@ fn main() {
         gl::GenBuffers(1, &mut vbo);
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         gl::BufferData(
-            gl::ARRAY_BUFFER,                                                       // target
-            (vbuff.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, // size of data in bytes
-            vbuff.as_ptr() as *const gl::types::GLvoid, // pointer to data
-            gl::STATIC_DRAW,                               // usage
+            gl::ARRAY_BUFFER,                                                    // target
+            (vertices.len() * std::mem::size_of::<Vertex>()) as gl::types::GLsizeiptr, // size of data in bytes
+            vertices.as_ptr() as *const gl::types::GLvoid,                          // pointer to data
+            gl::STATIC_DRAW,                                                     // usage
         );
         gl::BindBuffer(gl::ARRAY_BUFFER, 0); // unbind the buffer
     }
@@ -114,19 +82,18 @@ fn main() {
         );
 
         gl::EnableVertexAttribArray(1); // this is "layout (location = 0)" in vertex shader
-     gl::VertexAttribPointer(
-        1, // index of the generic vertex attribute ("layout (location = 0)")
-        3, // the number of components per generic vertex attribute
-        gl::FLOAT, // data type
-        gl::FALSE, // normalized (int-to-float conversion)
-        (6 * std::mem::size_of::<f32>()) as gl::types::GLint, // stride (byte offset between consecutive attributes)
-        (3 * std::mem::size_of::<f32>()) as *const gl::types::GLvoid // offset of the first component
-    );
+        gl::VertexAttribPointer(
+            1,         // index of the generic vertex attribute ("layout (location = 0)")
+            3,         // the number of components per generic vertex attribute
+            gl::FLOAT, // data type
+            gl::FALSE, // normalized (int-to-float conversion)
+            (6 * std::mem::size_of::<f32>()) as gl::types::GLint, // stride (byte offset between consecutive attributes)
+            (3 * std::mem::size_of::<f32>()) as *const gl::types::GLvoid, // offset of the first component
+        );
 
         gl::BindBuffer(gl::ARRAY_BUFFER, 0);
         gl::BindVertexArray(0);
     }
-
 
     'main: loop {
         for event in event_pump.poll_iter() {
