@@ -1,4 +1,5 @@
 #[derive(Debug, Clone, Copy)]
+#[repr(C, packed)]
 pub struct Point {
     pub x: f32,
     pub y: f32,
@@ -12,6 +13,7 @@ impl Point {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[repr(C, packed)]
 pub struct Color {
     pub r: f32,
     pub g: f32,
