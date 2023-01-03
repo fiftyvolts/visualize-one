@@ -40,7 +40,7 @@ fn main() -> Result<(), String> {
         gl::ClearColor(0.3, 0.3, 0.5, 1.0);
     }
 
-    let shader_program = Program::from_res(&res, &Path::new("triangle"))?;
+    let shader_program = Program::from_res(&res, &Path::new("shaders/triangle"))?;
 
     let vertices = vec![
         Vertex::new(Point::new(-0.5, -0.5, 0.0), Color::new(1.0, 0.0, 1.0)),
