@@ -2,6 +2,9 @@ use gl;
 use std;
 use std::ffi::{CStr, CString};
 use std::iter::repeat;
+use std::path::Path;
+
+use crate::resources::Resources;
 
 pub struct Shader {
     id: gl::types::GLuint,
@@ -51,6 +54,18 @@ impl Shader {
 
     pub fn from_frag_source(source: &CStr) -> Result<Self, String> {
         Self::from_source(source, gl::FRAGMENT_SHADER)
+    }
+
+    pub fn from_res(res: &Resources, name: &Path) -> Result<Shader, String> {
+        let source = res
+            .load_cstring(name)
+            .map_err(|e| format!("Could not load {:?}: {:?}", name, e))?;
+
+        match name.extension().unwrap().to_str() {
+            Some("vert") => Self::from_vert_source(&source),
+            Some("frag") => Self::from_frag_source(&source),
+            _ => Err(format!("Unable to load from {:?}", name)),
+        }
     }
 
     pub fn id(&self) -> gl::types::GLuint {
@@ -123,6 +138,19 @@ impl Program {
         }
 
         Ok(Program { id: program_id })
+    }
+
+    pub fn from_res(res: &Resources,  name: &Path) -> Result<Program, String> {
+        const EXT_TYPES: [&str; 2] = [
+            "vert",
+            "frag"
+        ];
+
+        let shaders = EXT_TYPES.iter()
+        .map(|ext| Shader::from_res(res, &name.with_extension(ext)))
+        .collect::<Result<Vec<Shader>, String>>()?;
+
+        Program::from_shaders(&shaders[..])
     }
 
     pub fn id(&self) -> gl::types::GLuint {

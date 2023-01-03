@@ -2,14 +2,19 @@ extern crate gl;
 extern crate sdl2;
 
 use std;
-use std::ffi::CString;
+use std::path::Path;
 
 pub mod render_gl;
+pub mod resources;
 pub mod utils;
 
-use crate::utils::*;
+use render_gl::*;
+use resources::Resources;
+use utils::*;
 
-fn main() {
+fn main() -> Result<(), String> {
+    let res = Resources::from_relative_exe_path(Path::new("assets"))
+        .map_err(|e| format!("Could not init resources: {:?}", e))?;
     let sdl = sdl2::init().unwrap();
 
     let video_subsystem = sdl.video().unwrap();
@@ -35,15 +40,7 @@ fn main() {
         gl::ClearColor(0.3, 0.3, 0.5, 1.0);
     }
 
-    let vert_shader =
-        render_gl::Shader::from_vert_source(&CString::new(include_str!("triangle.vert")).unwrap())
-            .unwrap();
-
-    let frag_shader =
-        render_gl::Shader::from_frag_source(&CString::new(include_str!("triangle.frag")).unwrap())
-            .unwrap();
-
-    let shader_program = render_gl::Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
+    let shader_program = Program::from_res(&res, &Path::new("triangle"))?;
 
     let vertices = vec![
         Vertex::new(Point::new(-0.5, -0.5, 0.0), Color::new(1.0, 0.0, 1.0)),
@@ -57,10 +54,10 @@ fn main() {
         gl::GenBuffers(1, &mut vbo);
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         gl::BufferData(
-            gl::ARRAY_BUFFER,                                                    // target
+            gl::ARRAY_BUFFER,                                                          // target
             (vertices.len() * std::mem::size_of::<Vertex>()) as gl::types::GLsizeiptr, // size of data in bytes
-            vertices.as_ptr() as *const gl::types::GLvoid,                          // pointer to data
-            gl::STATIC_DRAW,                                                     // usage
+            vertices.as_ptr() as *const gl::types::GLvoid, // pointer to data
+            gl::STATIC_DRAW,                               // usage
         );
         gl::BindBuffer(gl::ARRAY_BUFFER, 0); // unbind the buffer
     }
@@ -77,8 +74,8 @@ fn main() {
             3,         // the number of components per generic vertex attribute
             gl::FLOAT, // data type
             gl::FALSE, // normalized (int-to-float conversion)
-            (6 * std::mem::size_of::<f32>()) as gl::types::GLint, // stride (byte offset between consecutive attributes)
-            std::ptr::null(),                                     // offset of the first component
+            std::mem::size_of::<Vertex>() as gl::types::GLint, // stride (byte offset between consecutive attributes)
+            std::ptr::null(),                                  // offset of the first component
         );
 
         gl::EnableVertexAttribArray(1); // this is "layout (location = 0)" in vertex shader
@@ -87,8 +84,8 @@ fn main() {
             3,         // the number of components per generic vertex attribute
             gl::FLOAT, // data type
             gl::FALSE, // normalized (int-to-float conversion)
-            (6 * std::mem::size_of::<f32>()) as gl::types::GLint, // stride (byte offset between consecutive attributes)
-            (3 * std::mem::size_of::<f32>()) as *const gl::types::GLvoid, // offset of the first component
+            std::mem::size_of::<Vertex>() as gl::types::GLint, // stride (byte offset between consecutive attributes)
+            std::mem::size_of::<Point>() as *const gl::types::GLvoid, // offset of the first component
         );
 
         gl::BindBuffer(gl::ARRAY_BUFFER, 0);
@@ -119,4 +116,6 @@ fn main() {
 
         window.gl_swap_window();
     }
+
+    Ok(())
 }
